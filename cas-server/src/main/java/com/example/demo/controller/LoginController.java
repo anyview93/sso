@@ -33,37 +33,40 @@ public class LoginController {
 	}
 	
 	@RequestMapping("/login")
-	public String index(HttpServletRequest request,HttpServletResponse response, String name, String password) throws IOException {
-		if(!"user".equals(name)) {
-			return "login";
-		}
+	public void index(HttpServletRequest request,HttpServletResponse response, String name) throws IOException {
 		String service = request.getParameter("service");
+		if(!"user".equals(name) && null != service && "".equals(service)) {
+			response.sendRedirect(service + "/loginCallBack" + "?ticket=123456789");
+			return;
+		}
 		response.addCookie(new Cookie("casServer", "casServer"));
 		response.sendRedirect(service + "/loginCallBack" + "?ticket=123456789");
-		return null;
 	}
 	
 	@RequestMapping("/ssoServer")
-	public String ssoServer(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	public void ssoServer(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		Cookie[] cookies = request.getCookies();
 		String service = request.getParameter("service");
-		for (Cookie cookie : cookies) {
-			if("casServer".equals(cookie.getName())) {
-				response.sendRedirect(service + "/loginCallBack" + "?ticket=123456789");
-				return null;
+		if (null != cookies){
+			for (Cookie cookie : cookies) {
+				if("casServer".equals(cookie.getName())) {
+					response.sendRedirect(service + "/loginCallBack" + "?ticket=123456789");
+					return;
+				}
 			}
 		}
-		return "login";
+		response.sendRedirect("http://localhost:8080/cas-server/login");
 	}
 	
 	@RequestMapping("/checkTicket")
-	public String checkTicket(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	public void checkTicket(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		String ticket = request.getParameter("ticket");
 		String service = request.getParameter("service");
 		if("123456789".equals(ticket)) {
-			response.sendRedirect(service + "/checkCallBack" + "?user=user");
-			return null;
+			request.getSession().setAttribute("user","user");
+			response.sendRedirect(service + "/login" + "?user=user");
+			return;
 		}
-		return "login";
+		response.sendRedirect("http://localhost:8080/cas-server/login");
 	}
 }

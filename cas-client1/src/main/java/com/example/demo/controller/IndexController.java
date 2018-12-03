@@ -31,10 +31,20 @@ public class IndexController {
 	@RequestMapping("/login")
 	public String login(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		HttpSession session = request.getSession();
-		if("client1".equals(session.getAttribute("user"))) {
-			return "index";
+        if(null != session){
+			Object attribute = session.getAttribute("user");
+			if(null != attribute){
+				String s = attribute.toString();
+				if("user".equals(s)) {
+					return "index";
+				}
+			}
 		}
-		response.sendRedirect("http://localhost:8080/cas-server/login?server=http://localhost:8081/cas-client1");
+        String user = request.getParameter("user");
+		if("user".equals(user)){
+            return "index";
+        }
+		response.sendRedirect("http://localhost:8080/cas-server/ssoServer?service=http://localhost:8081/cas-client1");
 		return null;
 	}
 	@RequestMapping("/logout")
@@ -46,11 +56,11 @@ public class IndexController {
 	}
 	
 	@RequestMapping("/loginCallBack")
-	public String loginCallBack(HttpServletRequest request,HttpServletResponse response) {
+	public String loginCallBack(HttpServletRequest request,HttpServletResponse response) throws IOException {
 		String ticket = request.getParameter("ticket");
 		if(null != ticket && !"".equals(ticket)) {
-			request.getSession().setAttribute("user", "client1");
-			response.addCookie(new Cookie("ticket", ticket));
+			response.sendRedirect("http://localhost:8080/cas-server/checkTicket?service=http://localhost:8081/cas-client1&ticket=" + ticket);
+			return null;
 		}
 		return "index";
 	}
