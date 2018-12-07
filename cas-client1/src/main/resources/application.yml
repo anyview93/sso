@@ -5,5 +5,5 @@ server:
 
 #ssoServer配置
 sso:
-  server: http://localhost:8080/sso-server
-  service: http://localhost:8080/sso-client1
+  server: http://localhost:8080/cas-server
+  service: http://localhost:8081/cas-client1

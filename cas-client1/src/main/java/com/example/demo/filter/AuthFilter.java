@@ -1,6 +1,7 @@
 package com.example.demo.filter;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.servlet.*;
@@ -8,18 +9,18 @@ import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.http.Part;
 import java.io.IOException;
 
+@Component
 @WebFilter(filterName = "AuthFilter",urlPatterns = "/*")
 public class AuthFilter implements Filter {
 
     public static final String SSO_USER = "sso.user";
     public static final String SSO_TICKET = "sso.ticket";
 
-    @Value("sso.server")
+    @Value("${sso.server}")
     private String ssoServer;
-    @Value("sso.service")
+    @Value("${sso.service}")
     private String service;
     public void destroy() {
     }
@@ -43,7 +44,7 @@ public class AuthFilter implements Filter {
                 response.sendRedirect(ssoServer + "/checkTicket?service=" + service + "&" + SSO_TICKET + "=" +ticket);
                 return;
             }
-            response.sendRedirect(ssoServer + "/ssoserver?service=" + service);
+            response.sendRedirect(ssoServer + "/ssoServer?service=" + service);
             return;
         }
         session.setAttribute(SSO_USER,user);
