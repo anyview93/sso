@@ -64,4 +64,9 @@ public class IndexController {
 		}
 		return "index";
 	}
+
+	@RequestMapping("/permission")
+	public String permission(){
+		return "index";
+	}
 }

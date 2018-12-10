@@ -7,3 +7,4 @@ server:
 sso:
   server: http://localhost:8080/cas-server
   service: http://localhost:8081/cas-client1
+  nofilter: index,login,logout,loginCallBack

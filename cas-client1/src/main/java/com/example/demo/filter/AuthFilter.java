@@ -22,6 +22,8 @@ public class AuthFilter implements Filter {
     private String ssoServer;
     @Value("${sso.service}")
     private String service;
+    @Value("${sso.nofilter}")
+    private String nofilter;
     public void destroy() {
     }
 
@@ -32,6 +34,12 @@ public class AuthFilter implements Filter {
         }
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) resp;
+        String uri = request.getRequestURI();
+        System.out.println("uri===========>>" + uri);
+        if(!StringUtils.isEmpty(uri) && isIgnore(uri)){
+            chain.doFilter(request,resp);
+            return;
+        }
         HttpSession session = request.getSession();
         if(null == session){
             response.sendRedirect(ssoServer + "/ssoServer?service=" + service);
@@ -52,7 +60,21 @@ public class AuthFilter implements Filter {
     }
 
     public void init(FilterConfig config) throws ServletException {
-
+        /*if(StringUtils.isEmpty(nofilter)){
+            nofilters = nofilter.split(",");
+        }*/
     }
+
+    private boolean isIgnore(String uri){
+        if(!StringUtils.isEmpty(nofilter)){
+            for (String nofil: nofilter.split(",")){
+                if(uri.contains(nofil)){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 
 }
