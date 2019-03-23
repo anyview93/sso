@@ -23,29 +23,24 @@ import org.springframework.web.bind.annotation.ResponseBody;
  */
 @Controller
 public class IndexController {
-	
-	@RequestMapping("")
+	public static final String SSO_USER = "sso.user";
+	public static final String CLIENT_USER = "client.user";
+	public static final String SSO_TICKET = "sso.ticket";
+	@RequestMapping("/index")
 	public String index() {
 		return "index";
 	}
 	@RequestMapping("/login")
 	public String login(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		System.out.println("======>>client-login");
 		HttpSession session = request.getSession();
         if(null != session){
-			Object attribute = session.getAttribute("user");
-			if(null != attribute){
-				String s = attribute.toString();
-				if("user".equals(s)) {
-					return "index";
-				}
+			Object ssoUser = session.getAttribute(SSO_USER);
+			if(null != ssoUser){
+				session.setAttribute(CLIENT_USER,ssoUser);
 			}
 		}
-        String user = request.getParameter("user");
-		if("user".equals(user)){
-            return "index";
-        }
-		response.sendRedirect("http://localhost:8080/cas-server/ssoServer?service=http://localhost:8081/cas-client1");
-		return null;
+		return "index";
 	}
 	@RequestMapping("/logout")
 	@ResponseBody
@@ -56,13 +51,13 @@ public class IndexController {
 	}
 	
 	@RequestMapping("/loginCallBack")
-	public String loginCallBack(HttpServletRequest request,HttpServletResponse response) throws IOException {
-		String ticket = request.getParameter("ticket");
+	public void loginCallBack(HttpServletRequest request,HttpServletResponse response) throws IOException {
+		System.out.println("======>>client-loginCallBack");
+		String ticket = request.getParameter(SSO_TICKET);
 		if(null != ticket && !"".equals(ticket)) {
-			response.sendRedirect("http://localhost:8080/cas-server/checkTicket?service=http://localhost:8081/cas-client1&ticket=" + ticket);
-			return null;
+			response.sendRedirect("http://localhost:8080/cas-server/checkTicket?service=http://localhost:8081/cas-client1&" + SSO_TICKET + "=" + ticket);
+			return;
 		}
-		return "index";
 	}
 
 	@RequestMapping("/permission")

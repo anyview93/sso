@@ -2,3 +2,10 @@ server:
   port: 8080
   servlet:
     context-path: /cas-server
+
+debug: true
+spring:
+  cache:
+    type: ehcache
+    ehcache:
+      config: classpath:ehcache.xml

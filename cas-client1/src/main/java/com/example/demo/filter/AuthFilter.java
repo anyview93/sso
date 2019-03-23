@@ -1,8 +1,10 @@
 package com.example.demo.filter;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
 
 import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
@@ -16,14 +18,15 @@ import java.io.IOException;
 public class AuthFilter implements Filter {
 
     public static final String SSO_USER = "sso.user";
+    public static final String CLIENT_USER = "client.user";
     public static final String SSO_TICKET = "sso.ticket";
 
     @Value("${sso.server}")
     private String ssoServer;
     @Value("${sso.service}")
     private String service;
-    @Value("${sso.nofilter}")
-    private String nofilter;
+    @Autowired
+    private RestTemplate restTemplate;
     public void destroy() {
     }
 
@@ -34,10 +37,10 @@ public class AuthFilter implements Filter {
         }
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) resp;
-        String uri = request.getRequestURI();
-        System.out.println("uri===========>>" + uri);
-        if(!StringUtils.isEmpty(uri) && isIgnore(uri)){
-            chain.doFilter(request,resp);
+
+        String url = request.getRequestURL().toString();
+        if(url.startsWith(service +"/index") || url.contains("loginCallBack") ||  url.contains("login")){
+            chain.doFilter(req, resp);
             return;
         }
         HttpSession session = request.getSession();
@@ -45,8 +48,13 @@ public class AuthFilter implements Filter {
             response.sendRedirect(ssoServer + "/ssoServer?service=" + service);
             return;
         }
-        Object user = session.getAttribute(SSO_USER);
-        if(null == user){
+        Object clientUser = session.getAttribute(CLIENT_USER);
+        if(null != clientUser){
+            doFilter(request,response,chain);
+            return;
+        }
+        Object ssoUser = session.getAttribute(SSO_USER);
+        if(null == ssoUser){
             String ticket =request.getParameter(SSO_TICKET);
             if(!StringUtils.isEmpty(ticket)){
                 response.sendRedirect(ssoServer + "/checkTicket?service=" + service + "&" + SSO_TICKET + "=" +ticket);
@@ -55,26 +63,12 @@ public class AuthFilter implements Filter {
             response.sendRedirect(ssoServer + "/ssoServer?service=" + service);
             return;
         }
-        session.setAttribute(SSO_USER,user);
+        session.setAttribute(CLIENT_USER,ssoUser);
         chain.doFilter(req, resp);
     }
 
     public void init(FilterConfig config) throws ServletException {
-        /*if(StringUtils.isEmpty(nofilter)){
-            nofilters = nofilter.split(",");
-        }*/
-    }
 
-    private boolean isIgnore(String uri){
-        if(!StringUtils.isEmpty(nofilter)){
-            for (String nofil: nofilter.split(",")){
-                if(uri.contains(nofil)){
-                    return true;
-                }
-            }
-        }
-        return false;
     }
-
 
 }
