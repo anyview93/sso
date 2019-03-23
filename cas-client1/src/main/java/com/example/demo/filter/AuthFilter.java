@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.Map;
 
 @Component
 @WebFilter(filterName = "AuthFilter",urlPatterns = "/*")
@@ -27,9 +28,11 @@ public class AuthFilter implements Filter {
     private String service;
     @Autowired
     private RestTemplate restTemplate;
+    @Override
     public void destroy() {
     }
 
+    @Override
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
         if(!(req instanceof HttpServletRequest) || !(resp instanceof HttpServletResponse)){
             chain.doFilter(req, resp);
@@ -39,7 +42,7 @@ public class AuthFilter implements Filter {
         HttpServletResponse response = (HttpServletResponse) resp;
 
         String url = request.getRequestURL().toString();
-        if(url.startsWith(service +"/index") || url.contains("loginCallBack") ||  url.contains("login")){
+        if(url.contains("login")){
             chain.doFilter(req, resp);
             return;
         }
@@ -56,17 +59,24 @@ public class AuthFilter implements Filter {
         Object ssoUser = session.getAttribute(SSO_USER);
         if(null == ssoUser){
             String ticket =request.getParameter(SSO_TICKET);
-            if(!StringUtils.isEmpty(ticket)){
-                response.sendRedirect(ssoServer + "/checkTicket?service=" + service + "&" + SSO_TICKET + "=" +ticket);
-                return;
+            if(StringUtils.isEmpty(ticket)){
+                response.sendRedirect(ssoServer + "/ssoServer?service=" + service);
+            }else {
+                Map map = restTemplate.postForObject(ssoServer + "/validateToken", ticket, Map.class);
+                String code = (String) map.get("code");
+                if("200".equals(code)){
+                    doFilter(request,response,chain);
+                }else {
+                    response.sendRedirect(ssoServer + "/ssoServer?service=" + service);
+                }
             }
-            response.sendRedirect(ssoServer + "/ssoServer?service=" + service);
             return;
         }
         session.setAttribute(CLIENT_USER,ssoUser);
         chain.doFilter(req, resp);
     }
 
+    @Override
     public void init(FilterConfig config) throws ServletException {
 
     }
