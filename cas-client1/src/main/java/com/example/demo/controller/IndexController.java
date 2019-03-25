@@ -49,16 +49,6 @@ public class IndexController {
 		session.removeAttribute("stat");
 		return "登出成功";
 	}
-	
-//	@RequestMapping("/loginCallBack")
-//	public void loginCallBack(HttpServletRequest request,HttpServletResponse response) throws IOException {
-//		System.out.println("======>>client-loginCallBack");
-//		String ticket = request.getParameter(SSO_TICKET);
-//		if(null != ticket && !"".equals(ticket)) {
-//			response.sendRedirect("http://localhost:8080/cas-server/checkTicket?service=http://localhost:8081/cas-client1&" + SSO_TICKET + "=" + ticket);
-//			return;
-//		}
-//	}
 
 	@RequestMapping("/permission")
 	public String permission(){

@@ -3,18 +3,24 @@
  */
 package com.example.demo.controller;
 
+import com.example.demo.entity.User;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import sun.security.provider.MD5;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.security.AlgorithmConstraints;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * LoginController.java
@@ -28,61 +34,62 @@ public class LoginController {
 	public static final String SSO_USER = "sso.user";
 	public static final String SSO_TICKET = "sso.ticket";
 	private static Map<String, String> user = new HashMap<>();
-	private static Map<String, String> map = new HashMap<>();
+	private static Map<String, String> subSystems = new ConcurrentHashMap<>();
+	private static Map<String, String> sessions = new ConcurrentHashMap<>();
 	static {
 		user.put("user", "123");
+		user.put("test","123");
 	}
-	
-	@RequestMapping("/login")
-	public void index(HttpServletRequest request,HttpServletResponse response, String name) throws IOException {
+
+	@GetMapping("/login")
+	public String login(HttpServletRequest request, RedirectAttributes attr){
+		System.out.println("======>>server-toLogin");
+		String service = request.getParameter("service");
+		attr.addAttribute("service", service);
+		return "login";
+	}
+
+	@PostMapping("/login")
+	public void login(HttpServletRequest request,HttpServletResponse response, String name, String password) throws IOException, NoSuchAlgorithmException {
 		System.out.println("======>>server-login");
 		String service = request.getParameter("service");
-		if("user".equals(name) && null != service && "".equals(service)) {
+		if(user.containsKey(name) && user.get(name).equals(password) && !StringUtils.isEmpty(service)) {
 			HttpSession session = request.getSession();
-			session.setAttribute(SSO_USER, name);
-			response.sendRedirect(service + "/loginCallBack" + "?ticket=123456789");
+			final String TGT = UUID.randomUUID().toString();
+			sessions.put(session.getId(),TGT);
+			User user = new User(name, name);
+			session.setAttribute(SSO_USER, user);
+			final String ST = MessageDigest.getInstance("MD5").digest(TGT.getBytes("UTF-8")).toString();
+			response.sendRedirect(service + "？" + SSO_TICKET + "=" + ST);
 			return;
 		}
-		response.sendRedirect(service + "/loginCallBack" + "?ticket=123456789");
+		response.sendRedirect("/cas-server/login?service=" + service);
 	}
 	
 	@RequestMapping("/ssoServer")
 	public void ssoServer(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		System.out.println("======>>server-ssoServer");
 		HttpSession session = request.getSession();
+		String service = request.getParameter("service");
 		Object ssoUser = session.getAttribute(SSO_USER);
 		if(null == ssoUser){
-			response.sendRedirect("http://localhost:8080/cas-server/login");
+			response.sendRedirect("/cas-server/login?service=" + service);
 			return;
 		}
-		String service = request.getParameter("service");
 		response.sendRedirect(service + "/loginCallBack?" + SSO_TICKET + "=123456789");
 	}
-	
-	/*@RequestMapping("/checkTicket")
-	public void checkTicket(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		System.out.println("======>>server-checkTicket");
-		String ticket = request.getParameter(SSO_TICKET);
-		String service = request.getParameter("service");
-		if("123456789".equals(ticket)) {
-			request.getSession().setAttribute(SSO_USER,"user");
-			response.sendRedirect(service + "/login?"+ SSO_USER + "=user");
-			return;
-		}
-		response.sendRedirect("http://localhost:8080/cas-server/login");
-	}*/
 
-	@PostMapping("/validateToken")
+	@PostMapping("/validateTicket")
 	@ResponseBody
-	public Map<String, String> validateToken(HttpServletRequest request){
+	public User validateTicket(@RequestBody Map<String, String> param){
 		System.out.println("======>>server-validateToken");
-		String ticket = request.getParameter(SSO_TICKET);
-		Map<String, String> result = new HashMap<>();
+		String ticket = param.get(SSO_TICKET);
 		if("123456789".equals(ticket)){
-			result.put("code", "200");
-			return result;
+			User user = new User();
+			user.setId("001");
+			user.setName("user");
+			return user;
 		}
-		result.put("code","400");
-		return result;
+		return null;
 	}
 }
