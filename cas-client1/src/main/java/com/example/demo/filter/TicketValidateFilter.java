@@ -9,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -49,7 +50,9 @@ public class TicketValidateFilter implements Filter {
             param.put(SSO_TICKET, ticket);
             try {
                 final User user = this.validate(ssoServer + "/validateTicket", param);
-                request.getSession().setAttribute(SSO_USER, user);
+                HttpSession session = request.getSession();
+                session.setAttribute(SSO_USER, user);
+                LogoutFilter.sessions.put(ticket,session);
                 response.sendRedirect("/cas-client1");
             } catch (Exception e) {
                 System.out.println("=====>>ticket校验失败");

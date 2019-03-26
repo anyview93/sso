@@ -4,9 +4,14 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.User;
+import com.example.demo.utils.CacheUtils;
+import net.sf.ehcache.CacheManager;
+import net.sf.ehcache.Element;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.Cookie;
@@ -29,9 +34,13 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Controller
 public class LoginController {
+
+	@Autowired
+	private RestTemplate restTemplate;
 	public static final String SSO_USER = "sso.user";
 	public static final String SSO_TICKET = "ticket";
 	public static final String TGC = "CASTGC";
+	private static final String LOGOUT_REQUEST = "logout.request";
 	private static final Map<String, String> user = new HashMap<>();
 	private static final Map<String, Set<String>> subSystems = new ConcurrentHashMap<>();
 	private static final Map<String, HttpSession> sessions = new ConcurrentHashMap<>();
@@ -89,7 +98,10 @@ public class LoginController {
 
 	private void getTicket(HttpServletRequest request, HttpServletResponse response, String service) throws IOException {
 		final String tgt = setCookie(response);
-		sessions.put(tgt,request.getSession());
+		HttpSession session = request.getSession();
+		Element element = new Element(session.getId(), session);
+		CacheUtils.getSessionCache().put(element);
+		sessions.put(tgt,session);
 		final String st = getTicket(tgt);
 		addSystem(service, tgt);
 		response.sendRedirect(service + "？" + SSO_TICKET + "=" + st);
@@ -136,6 +148,27 @@ public class LoginController {
 			}
 		}
 		return null;
+	}
+
+	@RequestMapping("/logout")
+	public void logout(HttpServletRequest request){
+		Cookie[] cookies = request.getCookies();
+		String tgt = "";
+		if(null != cookies && cookies.length > 0){
+			for (int i = 0; i < cookies.length; i++) {
+				if (TGC.equals(cookies[i].getName())){
+					tgt = cookies[i].getValue();
+					break;
+				}
+			}
+		}
+		Set<String> subSystemSet = subSystems.get(tgt);
+		for (String url: subSystemSet){
+			HashMap<String, Set<String>> param = new HashMap<>();
+			Set<String> stSet = sts.get(tgt);
+			param.put(LOGOUT_REQUEST,stSet);
+//			restTemplate.postForObject(url + "/logout",param , null);
+		}
 	}
 
 	public static void main(String[] args) throws NoSuchAlgorithmException, UnsupportedEncodingException {
