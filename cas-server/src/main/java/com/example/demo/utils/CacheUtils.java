@@ -1,7 +1,11 @@
+/*
 package com.example.demo.utils;
 
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
+
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
+import org.springframework.cache.support.SimpleCacheManager;
 
 public final class CacheUtils {
 
@@ -20,10 +24,11 @@ public final class CacheUtils {
         if(null == cacheManager){
             synchronized (CacheUtils.class){
                 if(null == cacheManager){
-                    cacheManager = CacheManager.create();
+//                    cacheManager = new ConcurrentMapCacheManage();
                 }
             }
         }
         return cacheManager;
     }
 }
+*/

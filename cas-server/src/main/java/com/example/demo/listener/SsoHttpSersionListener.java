@@ -1,10 +1,9 @@
 package com.example.demo.listener;
 
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
-import net.sf.ehcache.Ehcache;
-import net.sf.ehcache.Element;
+import com.example.demo.common.CacheEnum;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 
 import javax.servlet.annotation.WebListener;
 import javax.servlet.http.HttpSession;
@@ -13,8 +12,14 @@ import javax.servlet.http.HttpSessionListener;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 监听session销毁动作
+ */
 @WebListener("ssoHttpSersionListener")
-public class SSOHttpSersionListener implements HttpSessionListener {
+public class SsoHttpSersionListener implements HttpSessionListener {
+
+    @Autowired
+    private CacheManager cacheManager;
 
     private static final Map<String, HttpSession> sessions = new ConcurrentHashMap<>();
 
@@ -26,8 +31,8 @@ public class SSOHttpSersionListener implements HttpSessionListener {
 
     @Override
     public void sessionDestroyed(HttpSessionEvent se) {
-        Cache cas_sessions = CacheManager.create().getCache("cas_sessions");
+        Cache cache = cacheManager.getCache(CacheEnum.SESSIONS.name());
         HttpSession session = se.getSession();
-        cas_sessions.remove(session.getId());
+        cache.evict(session.getId());
     }
 }

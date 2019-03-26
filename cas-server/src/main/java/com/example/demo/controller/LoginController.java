@@ -3,11 +3,12 @@
  */
 package com.example.demo.controller;
 
+import com.example.demo.common.CacheEnum;
+import com.example.demo.entity.Subject;
 import com.example.demo.entity.User;
-import com.example.demo.utils.CacheUtils;
-import net.sf.ehcache.CacheManager;
-import net.sf.ehcache.Element;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -37,14 +38,18 @@ public class LoginController {
 
 	@Autowired
 	private RestTemplate restTemplate;
+	@Autowired
+	private CacheManager cacheManager;
+
 	public static final String SSO_USER = "sso.user";
 	public static final String SSO_TICKET = "ticket";
 	public static final String TGC = "CASTGC";
 	private static final String LOGOUT_REQUEST = "logout.request";
 	private static final Map<String, String> user = new HashMap<>();
 	private static final Map<String, Set<String>> subSystems = new ConcurrentHashMap<>();
-	private static final Map<String, HttpSession> sessions = new ConcurrentHashMap<>();
+	private static final Map<String, String> sessions = new ConcurrentHashMap<>();
 	private static final Map<String, Set<String>> sts = new ConcurrentHashMap<>();
+//	private static final Map<String,Set<Subject>> maps = new ConcurrentHashMap<>();
 
 
 	static {
@@ -67,7 +72,11 @@ public class LoginController {
 				}
 			}
 		}
-		HttpSession session = sessions.get(tgt);
+//		Set<Subject> subjects = maps.get(tgt);
+
+//		Cache cache = cacheManager.getCache(CacheEnum.SESSIONS.name());
+//		HttpSession session = cache.get(tgt,HttpSession.class);
+		HttpSession session = request.getSession();
 		final User user = (session != null) ? (User)session.getAttribute(SSO_USER) : null;
 		if(null != user){
 			try {
@@ -98,12 +107,12 @@ public class LoginController {
 
 	private void getTicket(HttpServletRequest request, HttpServletResponse response, String service) throws IOException {
 		final String tgt = setCookie(response);
-		HttpSession session = request.getSession();
-		Element element = new Element(session.getId(), session);
-		CacheUtils.getSessionCache().put(element);
-		sessions.put(tgt,session);
 		final String st = getTicket(tgt);
 		addSystem(service, tgt);
+		HttpSession session = request.getSession();
+		sessions.put(tgt,session.getId());
+		Cache cache = cacheManager.getCache(CacheEnum.SESSIONS.name());
+		cache.putIfAbsent(session.getId(),session);
 		response.sendRedirect(service + "？" + SSO_TICKET + "=" + st);
 	}
 
@@ -141,7 +150,9 @@ public class LoginController {
 		String ticket = param.get(SSO_TICKET);
 		for (Map.Entry<String, Set<String>> entry: sts.entrySet()){
 			if(entry.getValue().contains(ticket)){
-				HttpSession session = sessions.get(entry.getKey());
+				String sessionId = sessions.get(entry.getKey());
+				Cache cache = cacheManager.getCache(CacheEnum.SESSIONS.name());
+				HttpSession session = cache.get(sessionId, HttpSession.class);
 				Object obj = session.getAttribute(SSO_USER);
 				User user = (obj instanceof User) ? (User)obj : null;
 				return user;
@@ -188,11 +199,8 @@ public class LoginController {
 
 		// 遍历字节数组，通过位运算（位运算效率高），转换成字符放到字符数组中去
 		int index = 0;
-
 		for (byte b : byteArray) {
-
 			resultCharArray[index++] = hexDigits[b>>> 4 & 0xf];
-
 			resultCharArray[index++] = hexDigits[b& 0xf];
 
 		}
