@@ -15,7 +15,7 @@ import java.util.HashMap;
 public class TicketValidateFilter implements Filter {
     public static final String SSO_USER = "sso.user";
     public static final String CLIENT_USER = "client.user";
-    public static final String SSO_TICKET = "sso.ticket";
+    public static final String SSO_TICKET = "ticket";
 
     @Value("${sso.server}")
     private String ssoServer;
@@ -50,11 +50,12 @@ public class TicketValidateFilter implements Filter {
             try {
                 final User user = this.validate(ssoServer + "/validateTicket", param);
                 request.getSession().setAttribute(SSO_USER, user);
+                response.sendRedirect("/cas-client1");
             } catch (Exception e) {
                 System.out.println("=====>>ticket校验失败");
                 response.sendRedirect("http://www.baidu.com");
-                return;
             }
+            return;
         }
         chain.doFilter(request, response);
     }

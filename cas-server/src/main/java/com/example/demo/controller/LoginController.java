@@ -8,18 +8,16 @@ import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import sun.security.provider.MD5;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.security.AlgorithmConstraints;
+import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -32,51 +30,96 @@ import java.util.concurrent.ConcurrentHashMap;
 @Controller
 public class LoginController {
 	public static final String SSO_USER = "sso.user";
-	public static final String SSO_TICKET = "sso.ticket";
-	private static Map<String, String> user = new HashMap<>();
-	private static Map<String, String> subSystems = new ConcurrentHashMap<>();
-	private static Map<String, String> sessions = new ConcurrentHashMap<>();
+	public static final String SSO_TICKET = "ticket";
+	public static final String TGC = "CASTGC";
+	private static final Map<String, String> user = new HashMap<>();
+	private static final Map<String, Set<String>> subSystems = new ConcurrentHashMap<>();
+	private static final Map<String, HttpSession> sessions = new ConcurrentHashMap<>();
+	private static final Map<String, Set<String>> sts = new ConcurrentHashMap<>();
+
+
 	static {
 		user.put("user", "123");
 		user.put("test","123");
 	}
 
 	@GetMapping("/login")
-	public String login(HttpServletRequest request, RedirectAttributes attr){
+	public String login(HttpServletRequest request, HttpServletResponse response, RedirectAttributes attr){
 		System.out.println("======>>server-toLogin");
 		String service = request.getParameter("service");
 		attr.addAttribute("service", service);
+		Cookie[] cookies = request.getCookies();
+		String tgt = "";
+		if(null != cookies && cookies.length > 0){
+			for (int i = 0; i < cookies.length; i++) {
+				if (TGC.equals(cookies[i].getName())){
+					tgt = cookies[i].getValue();
+					break;
+				}
+			}
+		}
+		HttpSession session = sessions.get(tgt);
+		final User user = (session != null) ? (User)session.getAttribute(SSO_USER) : null;
+		if(null != user){
+			try {
+				final String st = getTicket(tgt);
+				addSystem(service, tgt);
+				response.sendRedirect(service + "？" + SSO_TICKET + "=" + st);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
 		return "login";
 	}
 
 	@PostMapping("/login")
-	public void login(HttpServletRequest request,HttpServletResponse response, String name, String password) throws IOException, NoSuchAlgorithmException {
+	public void login(HttpServletRequest request,HttpServletResponse response, String name, String password) throws IOException{
 		System.out.println("======>>server-login");
 		String service = request.getParameter("service");
 		if(user.containsKey(name) && user.get(name).equals(password) && !StringUtils.isEmpty(service)) {
 			HttpSession session = request.getSession();
-			final String TGT = UUID.randomUUID().toString();
-			sessions.put(session.getId(),TGT);
 			User user = new User(name, name);
 			session.setAttribute(SSO_USER, user);
-			final String ST = MessageDigest.getInstance("MD5").digest(TGT.getBytes("UTF-8")).toString();
-			response.sendRedirect(service + "？" + SSO_TICKET + "=" + ST);
+			getTicket(request, response, service);
 			return;
 		}
 		response.sendRedirect("/cas-server/login?service=" + service);
 	}
-	
-	@RequestMapping("/ssoServer")
-	public void ssoServer(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		System.out.println("======>>server-ssoServer");
-		HttpSession session = request.getSession();
-		String service = request.getParameter("service");
-		Object ssoUser = session.getAttribute(SSO_USER);
-		if(null == ssoUser){
-			response.sendRedirect("/cas-server/login?service=" + service);
-			return;
+
+	private void getTicket(HttpServletRequest request, HttpServletResponse response, String service) throws IOException {
+		final String tgt = setCookie(response);
+		sessions.put(tgt,request.getSession());
+		final String st = getTicket(tgt);
+		addSystem(service, tgt);
+		response.sendRedirect(service + "？" + SSO_TICKET + "=" + st);
+	}
+
+	private String setCookie(HttpServletResponse response) {
+		final String tgt = UUID.randomUUID().toString();
+		Cookie cookie = new Cookie(TGC, tgt);
+		response.addCookie(cookie);
+		return tgt;
+	}
+
+	private void addSystem(String service, String tgt) {
+		Set<String> subSystemSet = subSystems.get(tgt);
+		if(null == subSystemSet){
+			subSystemSet = new HashSet<>();
+			subSystems.put(tgt,subSystemSet);
 		}
-		response.sendRedirect(service + "/loginCallBack?" + SSO_TICKET + "=123456789");
+		subSystemSet.add(service);
+	}
+
+	private final String getTicket(String tgt){
+		final String st = UUID.randomUUID().toString();
+		Set<String> stSet = sts.get(tgt);
+		if(null == stSet){
+			stSet = new HashSet<>();
+			sts.put(tgt,stSet);
+		}
+		stSet.add(st);
+		return st;
 	}
 
 	@PostMapping("/validateTicket")
@@ -84,12 +127,44 @@ public class LoginController {
 	public User validateTicket(@RequestBody Map<String, String> param){
 		System.out.println("======>>server-validateToken");
 		String ticket = param.get(SSO_TICKET);
-		if("123456789".equals(ticket)){
-			User user = new User();
-			user.setId("001");
-			user.setName("user");
-			return user;
+		for (Map.Entry<String, Set<String>> entry: sts.entrySet()){
+			if(entry.getValue().contains(ticket)){
+				HttpSession session = sessions.get(entry.getKey());
+				Object obj = session.getAttribute(SSO_USER);
+				User user = (obj instanceof User) ? (User)obj : null;
+				return user;
+			}
 		}
 		return null;
+	}
+
+	public static void main(String[] args) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+		MessageDigest md5 = MessageDigest.getInstance("MD5");
+		md5.update("string".getBytes("UTF-8"));
+		String st = byteArrayToHex(md5.digest());
+		System.out.println(st);
+	}
+
+	private static String byteArrayToHex(byte[] byteArray){
+		// 首先初始化一个字符数组，用来存放每个16进制字符
+		char[] hexDigits = {'0','1','2','3','4','5','6','7','8','9', 'A','B','C','D','E','F' };
+
+		// new一个字符数组，这个就是用来组成结果字符串的（解释一下：一个byte是八位二进制，也就是2位十六进制字符（2的8次方等于16的2次方））
+
+		char[] resultCharArray =new char[byteArray.length * 2];
+
+		// 遍历字节数组，通过位运算（位运算效率高），转换成字符放到字符数组中去
+		int index = 0;
+
+		for (byte b : byteArray) {
+
+			resultCharArray[index++] = hexDigits[b>>> 4 & 0xf];
+
+			resultCharArray[index++] = hexDigits[b& 0xf];
+
+		}
+
+		// 字符数组组合成字符串返回
+		return new String(resultCharArray);
 	}
 }

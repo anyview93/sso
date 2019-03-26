@@ -1,0 +1,10 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /cas-client2
+
+#ssoServer配置
+sso:
+  server: http://localhost:8080/cas-server
+  service: http://localhost:8082/cas-client2
+  nofilter: login
