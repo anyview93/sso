@@ -45,11 +45,13 @@ public class LoginController {
 	public static final String SSO_TICKET = "ticket";
 	public static final String TGC = "CASTGC";
 	private static final String LOGOUT_REQUEST = "logout.request";
+	private static final String LOGOUT_URL = "logoutUrl";
+	private static final String SESSIONID = "sessionId";
 	private static final Map<String, String> user = new HashMap<>();
 	private static final Map<String, Set<String>> subSystems = new ConcurrentHashMap<>();
 	private static final Map<String, String> sessions = new ConcurrentHashMap<>();
 	private static final Map<String, Set<String>> sts = new ConcurrentHashMap<>();
-//	private static final Map<String,Set<Subject>> maps = new ConcurrentHashMap<>();
+	private static final Map<String,List<Subject>> maps = new ConcurrentHashMap<>();
 
 
 	static {
@@ -99,16 +101,16 @@ public class LoginController {
 			HttpSession session = request.getSession();
 			User user = new User(name, name);
 			session.setAttribute(SSO_USER, user);
-			getTicket(request, response, service);
+			redirectClient(request, response, service);
 			return;
 		}
 		response.sendRedirect("/cas-server/login?service=" + service);
 	}
 
-	private void getTicket(HttpServletRequest request, HttpServletResponse response, String service) throws IOException {
+	private void redirectClient(HttpServletRequest request, HttpServletResponse response, String service) throws IOException {
 		final String tgt = setCookie(response);
 		final String st = getTicket(tgt);
-		addSystem(service, tgt);
+//		addSystem(service, tgt);
 		HttpSession session = request.getSession();
 		sessions.put(tgt,session.getId());
 		Cache cache = cacheManager.getCache(CacheEnum.SESSIONS.name());
@@ -130,16 +132,30 @@ public class LoginController {
 			subSystems.put(tgt,subSystemSet);
 		}
 		subSystemSet.add(service);
+		List<Subject> subjects = maps.get(tgt);
+		if(null == subjects){
+			subjects = new ArrayList<>();
+			maps.put(tgt, subjects);
+		}
 	}
 
 	private final String getTicket(String tgt){
 		final String st = UUID.randomUUID().toString();
-		Set<String> stSet = sts.get(tgt);
+		List<Subject> subjects = maps.get(tgt);
+		if(null == subjects){
+			subjects = new ArrayList<>();
+			maps.put(tgt, subjects);
+		}
+		Subject subject = new Subject.Builder()
+				.setTicket(st)
+				.build();
+		subjects.add(subject);
+		/*Set<String> stSet = sts.get(tgt);
 		if(null == stSet){
 			stSet = new HashSet<>();
 			sts.put(tgt,stSet);
 		}
-		stSet.add(st);
+		stSet.add(st);*/
 		return st;
 	}
 
@@ -148,9 +164,22 @@ public class LoginController {
 	public User validateTicket(@RequestBody Map<String, String> param){
 		System.out.println("======>>server-validateToken");
 		String ticket = param.get(SSO_TICKET);
+		String logoutUrl = param.get(LOGOUT_URL);
+		String sessionId = param.get(SESSIONID);
 		for (Map.Entry<String, Set<String>> entry: sts.entrySet()){
+			String tgt = entry.getKey();
 			if(entry.getValue().contains(ticket)){
-				String sessionId = sessions.get(entry.getKey());
+				Subject subject = new Subject.Builder()
+						.setSessionId(sessionId)
+						.setLogoutUrl(logoutUrl)
+						.setTicket(ticket)
+						.build();
+				List<Subject> subjects = maps.get(tgt);
+				if(null == subjects){
+					subjects = new ArrayList<>();
+					maps.put(entry.getKey(),subjects);
+				}
+				subjects.add(subject);
 				Cache cache = cacheManager.getCache(CacheEnum.SESSIONS.name());
 				HttpSession session = cache.get(sessionId, HttpSession.class);
 				Object obj = session.getAttribute(SSO_USER);
