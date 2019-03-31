@@ -17,6 +17,8 @@ public class TicketValidateFilter implements Filter {
     public static final String SSO_USER = "sso.user";
     public static final String CLIENT_USER = "client.user";
     public static final String SSO_TICKET = "ticket";
+    private static final String LOGOUT_URL = "logoutUrl";
+    private static final String SESSIONID = "sessionId";
 
     @Value("${sso.server}")
     private String ssoServer;
@@ -44,15 +46,17 @@ public class TicketValidateFilter implements Filter {
             chain.doFilter(req, resp);
             return;
         }
+        HttpSession session = request.getSession();
         String ticket = request.getParameter(SSO_TICKET);
         if(!StringUtils.isEmpty(ticket)){
             HashMap<String, String> param = new HashMap<>();
             param.put(SSO_TICKET, ticket);
+            param.put(LOGOUT_URL, service);
+            param.put(SESSIONID, session.getId());
             try {
                 final User user = this.validate(ssoServer + "/validateTicket", param);
-                HttpSession session = request.getSession();
                 session.setAttribute(SSO_USER, user);
-                LogoutFilter.sessions.put(ticket,session);
+//                LogoutFilter.sessions.put(ticket,session);
                 response.sendRedirect("/cas-client1");
             } catch (Exception e) {
                 System.out.println("=====>>ticket校验失败");

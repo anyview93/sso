@@ -83,7 +83,7 @@ public class LoginController {
 		if(null != user){
 			try {
 				final String st = getTicket(tgt);
-				addSystem(service, tgt);
+//				addSystem(service, tgt);
 				response.sendRedirect(service + "？" + SSO_TICKET + "=" + st);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -166,7 +166,7 @@ public class LoginController {
 		String ticket = param.get(SSO_TICKET);
 		String logoutUrl = param.get(LOGOUT_URL);
 		String sessionId = param.get(SESSIONID);
-		for (Map.Entry<String, Set<String>> entry: sts.entrySet()){
+		/*for (Map.Entry<String, Set<String>> entry: sts.entrySet()){
 			String tgt = entry.getKey();
 			if(entry.getValue().contains(ticket)){
 				Subject subject = new Subject.Builder()
@@ -186,7 +186,23 @@ public class LoginController {
 				User user = (obj instanceof User) ? (User)obj : null;
 				return user;
 			}
+		}*/
+		for (Map.Entry<String, List<Subject>> entry: maps.entrySet()){
+			List<Subject> value = entry.getValue();
+			for (Subject subject: value){
+				if(ticket.equals(subject.getTicket())){
+					subject.setLogoutUrl(logoutUrl);
+					subject.setSessionId(sessionId);
+
+					Cache cache = cacheManager.getCache(CacheEnum.SESSIONS.name());
+					HttpSession session = cache.get(sessionId, HttpSession.class);
+					Object obj = session.getAttribute(SSO_USER);
+					User user = (obj instanceof User) ? (User)obj : null;
+					return user;
+				}
+			}
 		}
+
 		return null;
 	}
 
