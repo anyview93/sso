@@ -89,6 +89,10 @@ public class LoginController {
             Subject subject = maps.get(tgt);
             if(null != subject){
                 String st = getTicket(tgt);
+                if(subject.getTickets() == null){
+                    subject.setTickets(new ArrayList<>());
+                }
+                subject.getTickets().add(st);
                 Map<String, String> param = new HashMap<>();
                 param.put(SSO_TICKET,st);
                 redirectClient(request,response,service,param);

@@ -30,29 +30,29 @@ public class AuthFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
-        if(!(req instanceof HttpServletRequest) || !(resp instanceof HttpServletResponse)){
+        if (!(req instanceof HttpServletRequest) || !(resp instanceof HttpServletResponse)) {
             chain.doFilter(req, resp);
             return;
         }
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) resp;
 
-        if(isRequestUrlExcluded(request)){
+        if (isRequestUrlExcluded(request)) {
             chain.doFilter(req, resp);
             return;
         }
 
         HttpSession session = request.getSession(false);
-        final User user = (session != null) ? (User)session.getAttribute(SSO_USER) : null;
+        final User user = (session != null) ? (User) session.getAttribute(SSO_USER) : null;
         System.out.println("======>>" + user);
-        if(user != null){
+        if (user != null) {
             chain.doFilter(request, response);
             return;
         }
 
         final String ticket = request.getParameter(SSO_TICKET);
         System.out.println("=====>" + ticket);
-        if(!StringUtils.isEmpty(ticket)){
+        if (!StringUtils.isEmpty(ticket)) {
             chain.doFilter(request, response);
             return;
         }
@@ -66,12 +66,12 @@ public class AuthFilter implements Filter {
 
     }
 
-    private boolean isRequestUrlExcluded(HttpServletRequest request){
+    private boolean isRequestUrlExcluded(HttpServletRequest request) {
 
         String uri = request.getRequestURI();
         String[] split = nofilter.split(",");
         for (int i = 0; i < split.length; i++) {
-            if(uri.endsWith(split[i])){
+            if (uri.endsWith(split[i])) {
                 return true;
             }
         }

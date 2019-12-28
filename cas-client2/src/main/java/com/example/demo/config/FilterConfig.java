@@ -1,6 +1,7 @@
 package com.example.demo.config;
 
 import com.example.demo.filter.AuthFilter;
+import com.example.demo.filter.LogoutFilter;
 import com.example.demo.filter.TicketValidateFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -17,17 +18,22 @@ import javax.servlet.Filter;
 public class FilterConfig {
 
     @Bean
-    public Filter authFilter(){
+    public Filter authFilter() {
         return new AuthFilter();
     }
 
     @Bean
-    public Filter ticketValidateFilter(){
+    public Filter ticketValidateFilter() {
         return new TicketValidateFilter();
     }
 
     @Bean
-    public FilterRegistrationBean<Filter> authFilterRegistration(){
+    public Filter logoutFilter() {
+        return new LogoutFilter();
+    }
+
+    @Bean
+    public FilterRegistrationBean<Filter> authFilterRegistration() {
         FilterRegistrationBean<Filter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
         filterFilterRegistrationBean.setFilter(authFilter());
         filterFilterRegistrationBean.addUrlPatterns("/*");
@@ -36,11 +42,20 @@ public class FilterConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<Filter> ticketValidateFilterRegistration(){
+    public FilterRegistrationBean<Filter> ticketValidateFilterRegistration() {
         FilterRegistrationBean<Filter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
         filterFilterRegistrationBean.setFilter(ticketValidateFilter());
         filterFilterRegistrationBean.addUrlPatterns("/*");
         filterFilterRegistrationBean.setOrder(2);
+        return filterFilterRegistrationBean;
+    }
+
+    @Bean
+    public FilterRegistrationBean<Filter> logoutFilterRegistration() {
+        FilterRegistrationBean<Filter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
+        filterFilterRegistrationBean.setFilter(logoutFilter());
+        filterFilterRegistrationBean.addUrlPatterns("/logout");
+        filterFilterRegistrationBean.setOrder(3);
         return filterFilterRegistrationBean;
     }
 }
