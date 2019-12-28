@@ -5,12 +5,40 @@
     <title>Insert title here</title>
 </head>
 <body>
-<div>
-    <form action="login?service=http://localhost:8081/cas-client1" method="post">
-        <span>用户名:<input name="name"></span><br>
-        <span>密码:<input name="password"></span><br>
-        <span><input type="submit" value="登陆"></span><br>
-    </form>
+<div id="app">
+    <span>用户名:<input v-model="name"></span><br>
+    <span>密码:<input v-model="password"></span><br>
+    <span><a href="javascript:void(0)" @click="doSubmit">登陆</a></span><br>
 </div>
 </body>
+<!--<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>-->
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+    var vm = new Vue({
+        el:  '#app',
+        data: {
+            name: '',
+            password: ''
+        },
+        methods: {
+            doSubmit: function () {
+                var _this = this;
+                var url = window.location.href;
+
+                axios.post(url, {
+                    name: _this.name,
+                    password: _this.password
+                })
+                    .then(function (response) {
+                        console.log(response);
+                        window.location.href = response.data;
+                    })
+                    .catch(function (error) {
+                        console.error(error);
+                    });
+            }
+        }
+    })
+</script>
 </html>

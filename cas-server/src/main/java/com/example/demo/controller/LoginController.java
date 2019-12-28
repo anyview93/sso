@@ -10,7 +10,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -25,10 +24,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -43,6 +42,7 @@ import com.example.demo.entity.User;
  * @author shizhiguo
  * @date 2018年11月26日
  */
+@CrossOrigin
 @Controller
 public class LoginController {
 
@@ -58,7 +58,7 @@ public class LoginController {
     private static final String LOGOUT_REQUEST = "logout.request";
     private static final String LOGOUT_URL = "logoutUrl";
     private static final String SESSIONID = "sessionId";
-    private static final Map<String, String> user = new HashMap<>();
+    private static final Map<String, String> users = new HashMap<>();
     private static final Map<String, Set<String>> subSystems = new ConcurrentHashMap<>();
     private static final Map<String, String> sessions = new ConcurrentHashMap<>();
     private static final Map<String, Set<String>> sts = new ConcurrentHashMap<>();
@@ -66,8 +66,8 @@ public class LoginController {
 
 
     static {
-        user.put("user", "123");
-        user.put("test", "123");
+        users.put("user", "123");
+        users.put("test", "123");
     }
 
     @GetMapping("/login")
@@ -103,12 +103,15 @@ public class LoginController {
     }
 
     @PostMapping("/login")
-    public void login(HttpServletRequest request, HttpServletResponse response, String name, String password) throws IOException {
+    @ResponseBody
+    public String login(HttpServletRequest request, HttpServletResponse response,@RequestBody User user) throws IOException {
         System.out.println("======>>server-login");
         String service = request.getParameter(SSO_SERVICE);
-        if (user.containsKey(name) && user.get(name).equals(password) && !StringUtils.isEmpty(service)) {
+//        String name = request.getParameter("name");
+//        String password = request.getParameter("password");
+        if (users.containsKey(user.getName()) && users.get(user.getName()).equals(user.getPassword()) && !StringUtils.isEmpty(service)) {
             HttpSession session = request.getSession();
-            User user = new User(name, name);
+//            User user = new User(name, name);
             String tgt = setCookie(response);
             String st = getTicket(tgt);
             Subject subject = Subject.builder().sessionId(tgt).user(user).build();
@@ -120,10 +123,11 @@ public class LoginController {
             session.setAttribute(SSO_USER, subject);
             Map<String, String> param = new HashMap<>();
             param.put(SSO_TICKET,st);
-            redirectClient(request, response, service, param);
-            return;
+//            redirectClient(request, response, service, param);
+            return redirectUrl(service,param);
         }
-        response.sendRedirect("/cas-server/login?service=" + service);
+//        response.sendRedirect("/cas-server/login?service=" + service);
+        return "/cas-server/login?service=" + service;
     }
 
     private void redirectClient(HttpServletRequest request, HttpServletResponse response, String service, Map<String,String> param) throws IOException {
@@ -141,6 +145,15 @@ public class LoginController {
         }
         String paramString = builder.deleteCharAt(builder.length() - 1).toString();
         response.sendRedirect(service + paramString);
+    }
+
+    private String redirectUrl(String service, Map<String,String> param) throws IOException {
+        StringBuilder builder = new StringBuilder().append(service).append("?");
+        if(null != param && !param.isEmpty()){
+            param.entrySet()
+                    .forEach(e -> builder.append(e.getKey()).append("=").append(e.getValue()).append("&"));
+        }
+        return builder.deleteCharAt(builder.length() - 1).toString();
     }
 
     private String setCookie(HttpServletResponse response) {
@@ -190,7 +203,7 @@ public class LoginController {
         return null;
     }
 
-    @RequestMapping("/logout")
+    @GetMapping("/logout")
     public void logout(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         String tgt = "";
