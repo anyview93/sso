@@ -10,12 +10,12 @@ import org.springframework.web.client.RestTemplate;
 @EnableCaching
 public class CasServer {
 
-	public static void main(String[] args) {
-		SpringApplication.run(CasServer.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(CasServer.class, args);
+    }
 
-	@Bean
-	public RestTemplate restTemplate(){
-		return new RestTemplate();
-	}
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
 }

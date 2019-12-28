@@ -18,7 +18,7 @@ import java.util.List;
 public class CacheManagerConfig {
     @Bean("cacheManager")
     // List<Cache>会主动搜索Cache的实现bean，并添加到caches中
-    public SimpleCacheManager cacheManager(List<Cache> caches){
+    public SimpleCacheManager cacheManager(List<Cache> caches) {
         SimpleCacheManager simpleCacheManager = new SimpleCacheManager();
 
         simpleCacheManager.setCaches(caches);
@@ -27,7 +27,7 @@ public class CacheManagerConfig {
 
 
     @Bean
-    public ConcurrentMapCacheFactoryBean sessions(){
+    public ConcurrentMapCacheFactoryBean sessions() {
         ConcurrentMapCacheFactoryBean sessions = new ConcurrentMapCacheFactoryBean();
         // sessions，则需要添加这样的一个bean
         sessions.setName(CacheEnum.SESSIONS.name());

@@ -18,22 +18,22 @@ import javax.servlet.Filter;
 public class FilterConfig {
 
     @Bean
-    public Filter authFilter(){
+    public Filter authFilter() {
         return new AuthFilter();
     }
 
     @Bean
-    public Filter ticketValidateFilter(){
+    public Filter ticketValidateFilter() {
         return new TicketValidateFilter();
     }
 
     @Bean
-    public Filter logoutFilter(){
+    public Filter logoutFilter() {
         return new LogoutFilter();
     }
 
     @Bean
-    public FilterRegistrationBean<Filter> authFilterRegistration(){
+    public FilterRegistrationBean<Filter> authFilterRegistration() {
         FilterRegistrationBean<Filter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
         filterFilterRegistrationBean.setFilter(authFilter());
         filterFilterRegistrationBean.addUrlPatterns("/*");
@@ -42,7 +42,7 @@ public class FilterConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<Filter> ticketValidateFilterRegistration(){
+    public FilterRegistrationBean<Filter> ticketValidateFilterRegistration() {
         FilterRegistrationBean<Filter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
         filterFilterRegistrationBean.setFilter(ticketValidateFilter());
         filterFilterRegistrationBean.addUrlPatterns("/*");
@@ -51,7 +51,7 @@ public class FilterConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<Filter> logoutFilterRegistration(){
+    public FilterRegistrationBean<Filter> logoutFilterRegistration() {
         FilterRegistrationBean<Filter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
         filterFilterRegistrationBean.setFilter(logoutFilter());
         filterFilterRegistrationBean.addUrlPatterns("/logout");

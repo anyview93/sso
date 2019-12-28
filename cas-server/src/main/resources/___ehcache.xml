@@ -9,7 +9,7 @@
             diskPersistent="false"
             timeToIdleSeconds="0"
             timeToLiveSeconds="600"
-            memoryStoreEvictionPolicy="LRU" />
+            memoryStoreEvictionPolicy="LRU"/>
 
     <!-- 这里的 users 缓存空间是为了下面的 demo 做准备 -->
     <cache
@@ -20,7 +20,7 @@
             diskPersistent="false"
             timeToIdleSeconds="0"
             timeToLiveSeconds="300"
-            memoryStoreEvictionPolicy="LRU" />
+            memoryStoreEvictionPolicy="LRU"/>
 
     <cache
             name="cas_sessions"
@@ -30,5 +30,5 @@
             diskPersistent="false"
             timeToIdleSeconds="0"
             timeToLiveSeconds="300"
-            memoryStoreEvictionPolicy="LRU" />
+            memoryStoreEvictionPolicy="LRU"/>
 </ehcache>

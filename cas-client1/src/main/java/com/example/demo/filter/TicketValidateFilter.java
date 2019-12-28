@@ -28,27 +28,27 @@ public class TicketValidateFilter implements Filter {
     private String nofilter;
     @Autowired
     private RestTemplate restTemplate;
-    
+
     @Override
     public void destroy() {
     }
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
-        if(!(req instanceof HttpServletRequest) || !(resp instanceof HttpServletResponse)){
+        if (!(req instanceof HttpServletRequest) || !(resp instanceof HttpServletResponse)) {
             chain.doFilter(req, resp);
             return;
         }
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) resp;
 
-        if(isRequestUrlExcluded(request)){
+        if (isRequestUrlExcluded(request)) {
             chain.doFilter(req, resp);
             return;
         }
         HttpSession session = request.getSession();
         String ticket = request.getParameter(SSO_TICKET);
-        if(!StringUtils.isEmpty(ticket)){
+        if (!StringUtils.isEmpty(ticket)) {
             HashMap<String, String> param = new HashMap<>();
             param.put(SSO_TICKET, ticket);
             param.put(LOGOUT_URL, service);
@@ -72,21 +72,21 @@ public class TicketValidateFilter implements Filter {
 
     }
 
-    private boolean isRequestUrlExcluded(HttpServletRequest request){
+    private boolean isRequestUrlExcluded(HttpServletRequest request) {
 
         String uri = request.getRequestURI();
         String[] split = nofilter.split(",");
         for (int i = 0; i < split.length; i++) {
-            if(uri.endsWith(split[i])){
+            if (uri.endsWith(split[i])) {
                 return true;
             }
         }
         return false;
     }
 
-    private User validate(String url, Object param) throws Exception{
+    private User validate(String url, Object param) throws Exception {
         User user = restTemplate.postForObject(url, param, User.class);
-        if(null == user){
+        if (null == user) {
             throw new NullPointerException();
         }
         return user;
