@@ -1,7 +1,6 @@
 package com.example.demo.entity;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +14,7 @@ import lombok.Data;
 @Builder
 public class Subject {
     private String sessionId;
-    private String logoutUrl;
+    private Set<String> logoutUrls;
     private User user;
-    private List<String> tickets;
+    private Set<String> tickets;
 }

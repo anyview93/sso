@@ -17,7 +17,7 @@ public class TicketValidateFilter implements Filter {
     public static final String SSO_USER = "sso.user";
     public static final String CLIENT_USER = "client.user";
     public static final String SSO_TICKET = "ticket";
-    private static final String LOGOUT_URL = "logoutUrl";
+    private static final String SSO_SERVICE = "service";
     private static final String SESSIONID = "sessionId";
 
     @Value("${sso.server}")
@@ -51,7 +51,7 @@ public class TicketValidateFilter implements Filter {
         if (!StringUtils.isEmpty(ticket)) {
             HashMap<String, String> param = new HashMap<>();
             param.put(SSO_TICKET, ticket);
-            param.put(LOGOUT_URL, service);
+            param.put(SSO_SERVICE, service);
             param.put(SESSIONID, session.getId());
             try {
                 final User user = this.validate(ssoServer + "/validateTicket", param);

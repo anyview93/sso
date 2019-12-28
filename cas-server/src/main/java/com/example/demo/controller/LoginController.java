@@ -54,12 +54,12 @@ public class LoginController {
     public static final String SSO_USER = "sso.user";
     public static final String SSO_TICKET = "ticket";
     public static final String SSO_SERVICE = "service";
-    public static final String TGC = "CASTGC";
+    public static final String SSO_TGC = "CAS_TGC";
     private static final String LOGOUT_REQUEST = "logout.request";
     private static final String LOGOUT_URL = "logoutUrl";
     private static final String SESSIONID = "sessionId";
     private static final Map<String, String> users = new HashMap<>();
-    private static final Map<String, Set<String>> subSystems = new ConcurrentHashMap<>();
+    private static final Map<String , Set<String>> subSystems = new ConcurrentHashMap<>();
     private static final Map<String, String> sessions = new ConcurrentHashMap<>();
     private static final Map<String, Set<String>> sts = new ConcurrentHashMap<>();
     private static final Map<String, Subject> maps = new ConcurrentHashMap<>();
@@ -79,7 +79,7 @@ public class LoginController {
         String tgt = "";
         if (null != cookies && cookies.length > 0) {
             for (int i = 0; i < cookies.length; i++) {
-                if (TGC.equals(cookies[i].getName())) {
+                if (SSO_TGC.equals(cookies[i].getName())) {
                     tgt = cookies[i].getValue();
                     break;
                 }
@@ -90,7 +90,7 @@ public class LoginController {
             if(null != subject){
                 String st = getTicket(tgt);
                 if(subject.getTickets() == null){
-                    subject.setTickets(new ArrayList<>());
+                    subject.setTickets(new HashSet<>());
                 }
                 subject.getTickets().add(st);
                 Map<String, String> param = new HashMap<>();
@@ -107,16 +107,13 @@ public class LoginController {
     public String login(HttpServletRequest request, HttpServletResponse response,@RequestBody User user) throws IOException {
         System.out.println("======>>server-login");
         String service = request.getParameter(SSO_SERVICE);
-//        String name = request.getParameter("name");
-//        String password = request.getParameter("password");
         if (users.containsKey(user.getName()) && users.get(user.getName()).equals(user.getPassword()) && !StringUtils.isEmpty(service)) {
             HttpSession session = request.getSession();
-//            User user = new User(name, name);
             String tgt = setCookie(response);
             String st = getTicket(tgt);
             Subject subject = Subject.builder().sessionId(tgt).user(user).build();
             if(null == subject.getTickets()){
-                subject.setTickets(new ArrayList<>());
+                subject.setTickets(new HashSet<>());
             }
             subject.getTickets().add(st);
             maps.put(tgt,subject);
@@ -158,23 +155,16 @@ public class LoginController {
 
     private String setCookie(HttpServletResponse response) {
         final String tgt = UUID.randomUUID().toString();
-        Cookie cookie = new Cookie(TGC, tgt);
+        Cookie cookie = new Cookie(SSO_TGC, tgt);
         response.addCookie(cookie);
         return tgt;
     }
 
     private void addSystem(String service, String tgt) {
-        Set<String> subSystemSet = subSystems.get(tgt);
-        if (null == subSystemSet) {
-            subSystemSet = new HashSet<>();
-            subSystems.put(tgt, subSystemSet);
+        if (null == subSystems.get(tgt)) {
+            subSystems.put(tgt, new HashSet<>());
         }
-        subSystemSet.add(service);
-        /*Subject subject = maps.get(tgt);
-        if (null == subjects) {
-            subjects = new ArrayList<>();
-            maps.put(tgt, subjects);
-        }*/
+        subSystems.get(tgt).add(service);
     }
 
     private final String getTicket(String tgt) {
@@ -193,10 +183,16 @@ public class LoginController {
     public User validateTicket(@RequestBody Map<String, String> param) {
         System.out.println("======>>server-validateToken");
         String ticket = param.get(SSO_TICKET);
+        String service = param.get(SSO_SERVICE);
 
         for (Map.Entry<String, Subject> entry : maps.entrySet()) {
             Subject subject = entry.getValue();
             if(subject.getTickets().contains(ticket)){
+                addSystem(service,subject.getSessionId());
+                if(subject.getLogoutUrls() == null){
+                    subject.setLogoutUrls(new HashSet<>());
+                }
+                subject.getLogoutUrls().add(service);
                 return subject.getUser();
             }
         }
@@ -209,7 +205,7 @@ public class LoginController {
         String tgt = "";
         if (null != cookies && cookies.length > 0) {
             for (int i = 0; i < cookies.length; i++) {
-                if (TGC.equals(cookies[i].getName())) {
+                if (SSO_TGC.equals(cookies[i].getName())) {
                     tgt = cookies[i].getValue();
                     break;
                 }
