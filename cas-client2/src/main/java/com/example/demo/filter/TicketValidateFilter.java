@@ -56,13 +56,11 @@ public class TicketValidateFilter implements Filter {
             try {
                 final User user = this.validate(ssoServer + "/validateTicket", param);
                 session.setAttribute(SSO_USER, user);
-//                LogoutFilter.sessions.put(ticket,session);
-                response.sendRedirect("/cas-client2");
+                LogoutFilter.sessions.putIfAbsent(ticket,session);
             } catch (Exception e) {
                 System.out.println("=====>>ticket校验失败");
                 response.sendRedirect("http://www.baidu.com");
             }
-            return;
         }
         chain.doFilter(request, response);
     }

@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
 public class TicketValidateFilter implements Filter {
     public static final String SSO_USER = "sso.user";
@@ -56,13 +57,12 @@ public class TicketValidateFilter implements Filter {
             try {
                 final User user = this.validate(ssoServer + "/validateTicket", param);
                 session.setAttribute(SSO_USER, user);
-//                LogoutFilter.sessions.put(ticket,session);
-                response.sendRedirect("/cas-client1");
+                LogoutFilter.sessions.putIfAbsent(ticket,session);
             } catch (Exception e) {
                 System.out.println("=====>>ticket校验失败");
                 response.sendRedirect("http://www.baidu.com");
+                return;
             }
-            return;
         }
         chain.doFilter(request, response);
     }

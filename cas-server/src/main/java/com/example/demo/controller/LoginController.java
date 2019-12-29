@@ -5,14 +5,13 @@ package com.example.demo.controller;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.http.Cookie;
@@ -20,6 +19,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.example.demo.entity.SystemInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
@@ -34,6 +34,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.demo.entity.Subject;
 import com.example.demo.entity.User;
+import sun.net.www.http.HttpClient;
 
 /**
  * LoginController.java
@@ -59,7 +60,7 @@ public class LoginController {
     private static final String LOGOUT_URL = "logoutUrl";
     private static final String SESSIONID = "sessionId";
     private static final Map<String, String> users = new HashMap<>();
-    private static final Map<String , Set<String>> subSystems = new ConcurrentHashMap<>();
+    private static final Map<String , List<SystemInfo>> subSystems = new ConcurrentHashMap<>();
     private static final Map<String, String> sessions = new ConcurrentHashMap<>();
     private static final Map<String, Set<String>> sts = new ConcurrentHashMap<>();
     private static final Map<String, Subject> maps = new ConcurrentHashMap<>();
@@ -160,11 +161,11 @@ public class LoginController {
         return tgt;
     }
 
-    private void addSystem(String service, String tgt) {
+    private void addSystem(String service, String tgt, String ticket) {
         if (null == subSystems.get(tgt)) {
-            subSystems.put(tgt, new HashSet<>());
+            subSystems.put(tgt, new ArrayList<>());
         }
-        subSystems.get(tgt).add(service);
+        subSystems.get(tgt).add(new SystemInfo(ticket,service));
     }
 
     private final String getTicket(String tgt) {
@@ -188,7 +189,7 @@ public class LoginController {
         for (Map.Entry<String, Subject> entry : maps.entrySet()) {
             Subject subject = entry.getValue();
             if(subject.getTickets().contains(ticket)){
-                addSystem(service,subject.getSessionId());
+                addSystem(service,subject.getSessionId(),ticket);
                 if(subject.getLogoutUrls() == null){
                     subject.setLogoutUrls(new HashSet<>());
                 }
@@ -200,24 +201,28 @@ public class LoginController {
     }
 
     @GetMapping("/logout")
-    public void logout(HttpServletRequest request) {
+    public String logout(HttpServletRequest request,HttpServletResponse response) throws IOException {
         Cookie[] cookies = request.getCookies();
         String tgt = "";
         if (null != cookies && cookies.length > 0) {
             for (int i = 0; i < cookies.length; i++) {
                 if (SSO_TGC.equals(cookies[i].getName())) {
                     tgt = cookies[i].getValue();
+                    cookies[i].setMaxAge(0);
                     break;
                 }
             }
         }
-        Set<String> subSystemSet = subSystems.get(tgt);
-        for (String url : subSystemSet) {
-            HashMap<String, Set<String>> param = new HashMap<>();
-            Set<String> stSet = sts.get(tgt);
-            param.put(LOGOUT_REQUEST, stSet);
-//			restTemplate.postForObject(url + "/logout",param , null);
+        if(subSystems.containsKey(tgt)){
+            List<SystemInfo> systemInfos = subSystems.get(tgt);
+            subSystems.remove(tgt);
+            for (SystemInfo sys : systemInfos) {
+                String url = sys.getSystemUrl() + "/logout?" + SSO_TICKET + "=" + sys.getTicket();
+                restTemplate.delete(url);
+            }
         }
+        maps.remove(tgt);
+        return "logout";
     }
 
     public static void main(String[] args) throws NoSuchAlgorithmException, UnsupportedEncodingException {
